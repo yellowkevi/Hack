@@ -3,7 +3,8 @@
 A single-page trivia game where a local Gemma model plays Grumbold, a stubborn, condescending tavern keeper.
 
 Gemma does all of the work:
-- **Writes multiple-choice questions** (question, four options, correct answer) for any topic the player types.
+- **Writes the questions** for any topic the player types.
+- **Judges free-text answers** (synonyms and typos are fine).
 - **Roasts or grudgingly praises** the contestant by name, remembering earlier answers.
 - **Delivers a final verdict** at the end of the game.
 
