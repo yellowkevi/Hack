@@ -3,119 +3,290 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Grumbold's Trivia Tavern</title>
+<title>Grumbold's Trivia</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@500;600;700&family=Work+Sans:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
   :root {
-    --bg: #1b130d; --panel: #2a1e14; --line: #4a3523; --text: #f3e6d3;
-    --muted: #b49a7c; --gold: #f0b94a; --good: #7fcf7a; --bad: #e9695c;
+    --primary: #2563EB; --on-primary: #FFFFFF;
+    --accent: #F59E0B;
+    --bg: #F8FAFC; --fg: #0F172A; --card: #FFFFFF;
+    --muted: #F1F5F9; --muted-fg: #475569; --border: #E2E8F0;
+    --success: #15803D; --success-bg: #DCFCE7; --success-border: #22C55E;
+    --danger: #B91C1C; --danger-bg: #FEE2E2; --danger-border: #EF4444;
+    --ring: #2563EB;
+    --radius: 14px;
+    --shadow: 0 1px 2px rgba(15, 23, 42, .06), 0 8px 24px rgba(15, 23, 42, .06);
+    --font-head: "Outfit", system-ui, sans-serif;
+    --font-body: "Work Sans", system-ui, sans-serif;
   }
-  * { box-sizing: border-box; }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --primary: #3B82F6; --bg: #0B1120; --fg: #F1F5F9; --card: #111A2E;
+      --muted: #1A2540; --muted-fg: #A3B1C6; --border: #24314F;
+      --success: #4ADE80; --success-bg: #0F2A1C; --success-border: #22C55E;
+      --danger: #F87171; --danger-bg: #2E1416; --danger-border: #EF4444;
+      --ring: #60A5FA;
+      --shadow: 0 1px 2px rgba(0, 0, 0, .3), 0 8px 24px rgba(0, 0, 0, .25);
+    }
+  }
+
+  * { box-sizing: border-box; margin: 0; }
+  html { -webkit-text-size-adjust: 100%; }
   body {
-    margin: 0; min-height: 100vh; background: radial-gradient(circle at top, #3a2716, var(--bg) 60%);
-    color: var(--text); font: 17px/1.5 Georgia, "Times New Roman", serif;
-    display: flex; justify-content: center; padding: 16px;
+    min-height: 100dvh; background: var(--bg); color: var(--fg);
+    font: 400 16px/1.5 var(--font-body);
+    display: flex; flex-direction: column; align-items: center;
+    padding: max(16px, env(safe-area-inset-top)) 16px max(16px, env(safe-area-inset-bottom));
   }
-  main { width: 100%; max-width: 760px; display: flex; flex-direction: column; gap: 12px; }
-  header { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
-  h1 { margin: 0; font-size: 1.5rem; color: var(--gold); letter-spacing: .5px; }
-  .stats { display: flex; gap: 14px; color: var(--muted); font-size: .95rem; }
-  .stats b { color: var(--gold); }
-  #chat {
-    background: var(--panel); border: 1px solid var(--line); border-radius: 12px;
-    padding: 14px; height: 50vh; overflow-y: auto; display: flex; flex-direction: column; gap: 10px;
+  main { width: 100%; max-width: 640px; flex: 1; display: flex; flex-direction: column; }
+  h1, h2 { font-family: var(--font-head); letter-spacing: -.02em; }
+  button, input, select { font: inherit; color: inherit; }
+  :focus-visible { outline: 3px solid var(--ring); outline-offset: 2px; }
+  [hidden] { display: none !important; }
+  .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+  /* ---------- Shared ---------- */
+  .btn {
+    min-height: 48px; padding: 0 22px; border-radius: 12px; border: 0; cursor: pointer;
+    background: var(--primary); color: var(--on-primary); font-weight: 600;
+    display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+    transition: transform .15s ease, opacity .2s ease, background-color .2s ease;
   }
-  .msg { max-width: 88%; padding: 10px 14px; border-radius: 12px; white-space: pre-wrap; }
-  .host { align-self: flex-start; background: #3b2a1b; border: 1px solid var(--line); }
-  .host .who { color: var(--gold); font-weight: bold; font-size: .8rem; display: block; margin-bottom: 2px; }
-  .player { align-self: flex-end; background: #2d3a2c; border: 1px solid #44603f; }
-  .player .who { color: var(--good); font-weight: bold; font-size: .8rem; display: block; margin-bottom: 2px; }
-  .question { align-self: stretch; max-width: 100%; text-align: center; border: 1px dashed var(--gold); color: var(--gold); }
-  .right { border-left: 4px solid var(--good); }
-  .wrong { border-left: 4px solid var(--bad); }
-  .error { align-self: stretch; max-width: 100%; border: 1px solid var(--bad); color: var(--bad); }
-  .typing { color: var(--muted); font-style: italic; }
-  form, .row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
-  input[type=text], select {
-    flex: 1; min-width: 0; padding: 11px 12px; border-radius: 8px; border: 1px solid var(--line);
-    background: #20160e; color: var(--text); font: inherit;
+  .btn:hover { opacity: .92; }
+  .btn:active { transform: scale(.98); }
+  .btn:disabled { opacity: .45; cursor: not-allowed; transform: none; }
+  .btn svg { width: 18px; height: 18px; }
+  .field { display: flex; flex-direction: column; gap: 6px; }
+  .field label { font-size: 14px; font-weight: 600; color: var(--muted-fg); }
+  .input {
+    min-height: 48px; padding: 0 14px; border-radius: 12px; border: 1px solid var(--border);
+    background: var(--card); transition: border-color .2s ease;
   }
-  button {
-    padding: 11px 16px; border-radius: 8px; border: 0; background: var(--gold); color: #2a1a05;
-    font: bold 1rem Georgia, serif; cursor: pointer;
+  .input:hover { border-color: var(--muted-fg); }
+  .screen { flex: 1; display: flex; flex-direction: column; animation: enter .3s ease-out; }
+  @keyframes enter { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+
+  /* ---------- Start ---------- */
+  #start-screen { justify-content: center; gap: 28px; padding: 24px 0; }
+  .brand { display: flex; flex-direction: column; gap: 10px; text-align: center; align-items: center; }
+  .logo {
+    width: 56px; height: 56px; border-radius: 16px; background: var(--primary); color: var(--on-primary);
+    display: grid; place-items: center; font: 700 28px var(--font-head);
   }
-  button.ghost { background: transparent; color: var(--muted); border: 1px solid var(--line); }
-  button:disabled { opacity: .5; cursor: default; }
-  label { color: var(--muted); font-size: .9rem; }
-  #status { color: var(--muted); font-size: .85rem; }
-  @media (max-width: 520px) { body { font-size: 16px; } .msg { max-width: 95%; } }
+  .brand h1 { font-size: clamp(28px, 6vw, 40px); line-height: 1.1; }
+  .brand p { color: var(--muted-fg); max-width: 40ch; }
+  .start-card {
+    background: var(--card); border: 1px solid var(--border); border-radius: var(--radius);
+    box-shadow: var(--shadow); padding: 24px; display: flex; flex-direction: column; gap: 18px;
+  }
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; }
+  .chip {
+    min-height: 36px; padding: 0 14px; border-radius: 999px; border: 1px solid var(--border);
+    background: var(--muted); color: var(--fg); font-size: 14px; cursor: pointer;
+    transition: border-color .2s ease, background-color .2s ease;
+  }
+  .chip:hover { border-color: var(--primary); }
+  .chip[aria-pressed="true"] { border-color: var(--primary); background: color-mix(in srgb, var(--primary) 12%, var(--card)); }
+
+  /* ---------- Game ---------- */
+  #game-screen { gap: 20px; padding-top: 8px; }
+  .topbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+  .progress { display: flex; gap: 6px; flex: 1; max-width: 240px; }
+  .progress span {
+    flex: 1; height: 6px; border-radius: 3px; background: var(--border);
+    transition: background-color .3s ease;
+  }
+  .progress .current { background: var(--primary); }
+  .progress .ok { background: var(--success-border); }
+  .progress .bad { background: var(--danger-border); }
+  .score { font: 600 15px var(--font-head); color: var(--muted-fg); }
+  .score b { color: var(--fg); font-size: 18px; }
+  .score.bump b { display: inline-block; animation: bump .4s ease; }
+  @keyframes bump { 50% { transform: scale(1.35); color: var(--success); } }
+
+  .qmeta { font-size: 14px; font-weight: 600; color: var(--primary); text-transform: uppercase; letter-spacing: .06em; }
+  .question { font-size: clamp(22px, 5vw, 30px); line-height: 1.25; font-weight: 600; text-wrap: balance; }
+
+  .choices { display: grid; gap: 10px; }
+  @media (min-width: 640px) { .choices { grid-template-columns: 1fr 1fr; } }
+  .choice {
+    position: relative; min-height: 64px; padding: 14px 16px; border-radius: 12px; cursor: pointer;
+    border: 2px solid var(--border); background: var(--card); text-align: left;
+    display: flex; align-items: center; gap: 12px; font-weight: 500;
+    transition: border-color .2s ease, background-color .2s ease, transform .15s ease, opacity .25s ease;
+  }
+  .choice:hover:not(:disabled) { border-color: var(--primary); }
+  .choice:active:not(:disabled) { transform: scale(.98); }
+  .choice:disabled { cursor: default; }
+  .key {
+    flex: none; width: 30px; height: 30px; border-radius: 8px; background: var(--muted); color: var(--muted-fg);
+    display: grid; place-items: center; font: 600 14px var(--font-head);
+    transition: background-color .2s ease, color .2s ease;
+  }
+  .choice .mark { margin-left: auto; width: 22px; height: 22px; flex: none; opacity: 0; transform: scale(.5); transition: opacity .2s ease, transform .25s cubic-bezier(.34,1.56,.64,1); }
+  .choice.correct { border-color: var(--success-border); background: var(--success-bg); }
+  .choice.correct .key { background: var(--success-border); color: #fff; }
+  .choice.correct .mark { opacity: 1; transform: none; color: var(--success); }
+  .choice.wrong { border-color: var(--danger-border); background: var(--danger-bg); animation: shake .4s ease; }
+  .choice.wrong .key { background: var(--danger-border); color: #fff; }
+  .choice.wrong .mark { opacity: 1; transform: none; color: var(--danger); }
+  .choice.picked.correct { animation: pop .35s ease; }
+  .choice.dim { opacity: .5; }
+  @keyframes pop { 50% { transform: scale(1.03); } }
+  @keyframes shake { 20%, 60% { transform: translateX(-6px); } 40%, 80% { transform: translateX(6px); } }
+
+  .host {
+    display: flex; gap: 12px; align-items: flex-start; padding: 16px; border-radius: var(--radius);
+    background: var(--card); border: 1px solid var(--border); box-shadow: var(--shadow);
+    animation: enter .3s ease-out;
+  }
+  .host.ok { border-left: 4px solid var(--success-border); }
+  .host.bad { border-left: 4px solid var(--danger-border); }
+  .avatar {
+    flex: none; width: 36px; height: 36px; border-radius: 50%; background: var(--accent); color: #0F172A;
+    display: grid; place-items: center; font: 700 16px var(--font-head);
+  }
+  .host-name { font: 600 14px var(--font-head); color: var(--muted-fg); }
+  .host-text { margin-top: 2px; }
+  .dots { display: inline-flex; gap: 4px; padding: 8px 0; }
+  .dots i { width: 7px; height: 7px; border-radius: 50%; background: var(--muted-fg); animation: blink 1.2s infinite ease-in-out; }
+  .dots i:nth-child(2) { animation-delay: .15s; } .dots i:nth-child(3) { animation-delay: .3s; }
+  @keyframes blink { 0%, 80%, 100% { opacity: .25; } 40% { opacity: 1; } }
+
+  .actions { display: flex; justify-content: flex-end; margin-top: auto; padding-top: 4px; }
+  .actions .btn { width: 100%; }
+  @media (min-width: 640px) { .actions { margin-top: 0; } .actions .btn { width: auto; } }
+
+  /* ---------- Loading / End ---------- */
+  .center { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; text-align: center; padding: 24px 0; }
+  .spinner { width: 36px; height: 36px; border-radius: 50%; border: 3px solid var(--border); border-top-color: var(--primary); animation: spin .8s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .muted { color: var(--muted-fg); }
+  .final { font: 700 clamp(56px, 16vw, 88px)/1 var(--font-head); letter-spacing: -.03em; }
+  .final small { font-size: .4em; color: var(--muted-fg); }
+  #end-screen .host { text-align: left; width: 100%; }
+  .alert {
+    padding: 12px 14px; border-radius: 12px; border: 1px solid var(--danger-border);
+    background: var(--danger-bg); color: var(--danger); font-size: 14px;
+  }
+
+  footer {
+    width: 100%; max-width: 640px; display: flex; align-items: center; justify-content: center; gap: 8px;
+    padding-top: 16px; font-size: 13px; color: var(--muted-fg);
+  }
+  footer select { background: transparent; border: 1px solid var(--border); border-radius: 8px; padding: 4px 8px; min-height: 32px; }
+  .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--muted-fg); flex: none; }
+  .dot.on { background: var(--success-border); } .dot.off { background: var(--danger-border); }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
+  }
 </style>
 </head>
 <body>
 <main>
-  <header>
-    <h1>🍺 Grumbold's Trivia Tavern</h1>
-    <div class="stats">
-      <span>Score <b id="score">0</b></span>
-      <span>Streak <b id="streak">0</b></span>
-      <span>Q <b id="qnum">0</b>/<b id="qtotal">0</b></span>
+  <!-- Start -->
+  <section id="start-screen" class="screen">
+    <div class="brand">
+      <div class="logo" aria-hidden="true">G</div>
+      <h1>Grumbold's Trivia</h1>
+      <p>Five questions. One very rude host. Get it wrong and he will make sure everyone knows.</p>
     </div>
-  </header>
+    <form id="start-form" class="start-card" autocomplete="off">
+      <div class="field">
+        <label for="player">Your name</label>
+        <input class="input" id="player" maxlength="24" placeholder="e.g. Judge Dave" required>
+      </div>
+      <div class="field">
+        <label for="topic">Topic</label>
+        <input class="input" id="topic" maxlength="80" placeholder="Anything you like" value="General knowledge">
+        <div class="chips" role="group" aria-label="Topic suggestions">
+          <button type="button" class="chip">General knowledge</button>
+          <button type="button" class="chip">90s cartoons</button>
+          <button type="button" class="chip">Space</button>
+          <button type="button" class="chip">Video games</button>
+          <button type="button" class="chip">Food</button>
+        </div>
+      </div>
+      <div id="start-error" class="alert" role="alert" hidden></div>
+      <button class="btn" id="start-btn" type="submit">
+        Start game
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+      </button>
+    </form>
+  </section>
 
-  <div class="row">
-    <label for="player">Contestant</label>
-    <input type="text" id="player" placeholder="Name (e.g. Judge Dave)" maxlength="24" style="flex:0 1 180px">
-    <label for="topic">Topic</label>
-    <input type="text" id="topic" placeholder="Anything: 90s cartoons, space, cheese…" value="Random trivia" maxlength="80">
-    <button id="start" type="button">Start game</button>
-  </div>
+  <!-- Loading -->
+  <section id="loading-screen" class="screen center" hidden aria-live="polite">
+    <div class="spinner" aria-hidden="true"></div>
+    <p class="muted" id="loading-text">Grumbold is writing your questions…</p>
+  </section>
 
-  <div id="chat" aria-live="polite"></div>
+  <!-- Game -->
+  <section id="game-screen" class="screen" hidden>
+    <div class="topbar">
+      <div class="progress" id="progress" aria-hidden="true"></div>
+      <div class="score" id="score-box">Score <b id="score">0</b></div>
+    </div>
+    <div>
+      <p class="qmeta" id="qmeta">Question 1 of 5</p>
+      <h2 class="question" id="question" tabindex="-1"></h2>
+    </div>
+    <div class="choices" id="choices" role="group" aria-labelledby="question"></div>
+    <div id="host-slot" aria-live="polite"></div>
+    <div class="actions">
+      <button class="btn" id="next-btn" type="button" hidden>
+        <span id="next-label">Next question</span>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+      </button>
+    </div>
+  </section>
 
-  <form id="form" autocomplete="off">
-    <input type="text" id="answer" placeholder="Your answer, if you dare…" disabled>
-    <button id="submit" type="submit" disabled>Answer</button>
-    <button id="skip" class="ghost" type="button" disabled>Skip</button>
-  </form>
-
-  <div class="row">
-    <label for="model">Gemma model</label>
-    <select id="model" style="flex:0 1 220px"></select>
-    <button class="ghost" id="refresh" type="button">Refresh models</button>
-    <span id="status"></span>
-  </div>
+  <!-- End -->
+  <section id="end-screen" class="screen center" hidden>
+    <p class="qmeta">Final score</p>
+    <p class="final" id="final"></p>
+    <div id="verdict-slot" aria-live="polite" style="width:100%"></div>
+    <button class="btn" id="again-btn" type="button">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg>
+      Play again
+    </button>
+  </section>
 </main>
+
+<footer>
+  <span class="dot" id="conn-dot" aria-hidden="true"></span>
+  <span id="conn-text">Connecting to Gemma…</span>
+  <label for="model" class="sr-only">Gemma model</label>
+  <select id="model" aria-label="Gemma model"></select>
+</footer>
 
 <script>
 const OLLAMA = "http://localhost:11434";
 const QCOUNT = 5;
+const KEYS = ["A", "B", "C", "D"];
 const $ = id => document.getElementById(id);
-const chat = $("chat");
-const state = { list: [], i: -1, score: 0, streak: 0, busy: false, active: false, log: [] };
+const ICON_OK = '<svg class="mark" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 13l4 4L19 7"/></svg>';
+const ICON_NO = '<svg class="mark" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>';
 
-const SYSTEM = `You are Grumbold, a stubborn, condescending tavern keeper hosting trivia night in a fantasy RPG tavern.
-You roast contestants who answer wrong: funny, creative, PG-13, aimed at their answer and their earlier mistakes, never at protected traits or real hardship.
+const state = { player: "", topic: "", list: [], i: 0, score: 0, streak: 0, results: [], log: [], locked: true };
+
+const SYSTEM = `You are Grumbold, a stubborn, condescending tavern keeper hosting trivia night.
+You roast contestants who answer wrong: funny, creative, PG-13, aimed at their answer and earlier mistakes, never at protected traits or real hardship.
 When they answer right you grudgingly concede while staying smug and unimpressed.
 You remember the whole game and call back earlier answers.`;
 
-function add(cls, text, who) {
-  const d = document.createElement("div");
-  d.className = "msg " + cls;
-  if (who) { const w = document.createElement("span"); w.className = "who"; w.textContent = who; d.appendChild(w); }
-  d.appendChild(document.createTextNode(text));
-  chat.appendChild(d); chat.scrollTop = chat.scrollHeight;
-  return d;
+// ---------- Screens ----------
+function show(id) {
+  for (const s of ["start-screen", "loading-screen", "game-screen", "end-screen"]) $(s).hidden = s !== id;
 }
 
-function setControls(on) { ["answer", "submit", "skip"].forEach(id => $(id).disabled = !on); if (on) $("answer").focus(); }
-function updateStats() {
-  $("score").textContent = state.score; $("streak").textContent = state.streak;
-  $("qnum").textContent = Math.max(state.i + 1, 0); $("qtotal").textContent = state.list.length;
-}
-
-// ---- Gemma (Ollama) ----
+// ---------- Gemma (Ollama) ----------
 async function gemma(messages, { json = false, tokens = 400, temperature = 1.0 } = {}) {
   const model = $("model").value;
-  if (!model) throw new Error("No model selected. Is Ollama running?");
+  if (!model) throw new Error("Gemma isn't connected. Make sure Ollama is running, then reload.");
   const body = { model, stream: false, messages, options: { temperature, num_predict: tokens } };
   if (json) body.format = "json";
   const post = b => fetch(OLLAMA + "/api/chat", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(b) });
@@ -125,7 +296,7 @@ async function gemma(messages, { json = false, tokens = 400, temperature = 1.0 }
     r = await post({ ...body, think: false });
     if (r.status === 400) r = await post(body);
   } catch {
-    throw new Error("Can't reach Ollama at " + OLLAMA + ". Start it with: OLLAMA_ORIGINS=* ollama serve");
+    throw new Error("Can't reach Ollama at " + OLLAMA + ". Serve this page from localhost and make sure Ollama is running.");
   }
   if (!r.ok) throw new Error("Ollama error " + r.status + ": " + (await r.text()).slice(0, 200));
   return (await r.json()).message.content.trim();
@@ -138,135 +309,196 @@ function parseJSON(text) {
   throw new Error("Gemma didn't return valid JSON.");
 }
 
+const shuffle = a => { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+
 async function generateQuestions(topic) {
   const text = await gemma([
-    { role: "system", content: "You write trivia questions. Output only JSON." },
-    { role: "user", content: `Write ${QCOUNT} trivia questions about "${topic}", easy to medium difficulty, each with a short, unambiguous factual answer. Reply as JSON: {"questions":[{"q":"...","a":"..."}]}` },
-  ], { json: true, tokens: 700, temperature: 0.8 });
+    { role: "system", content: "You write multiple-choice trivia questions. Output only JSON." },
+    { role: "user", content: `Write ${QCOUNT} multiple-choice trivia questions about "${topic}", easy to medium difficulty. Each has exactly 4 short options, exactly one correct, and plausible wrong options. Reply as JSON: {"questions":[{"q":"...","options":["...","...","...","..."],"answer":"<the correct option, copied exactly>"}]}` },
+  ], { json: true, tokens: 1200, temperature: 0.8 });
   const data = parseJSON(text);
-  const qs = (Array.isArray(data) ? data : data.questions || []).filter(x => x && x.q && x.a);
-  if (!qs.length) throw new Error("Gemma didn't produce any questions.");
-  return qs.slice(0, QCOUNT).map(x => ({ q: String(x.q), a: String(x.a) }));
+  const raw = Array.isArray(data) ? data : data.questions || [];
+  const qs = [];
+  for (const x of raw) {
+    const opts = Array.isArray(x?.options) ? x.options.map(String).slice(0, 4) : [];
+    let ans = typeof x?.answer === "number" ? opts[x.answer] : String(x?.answer ?? "");
+    if (!x?.q || opts.length !== 4 || !opts.includes(ans)) continue;
+    // Shuffle so the correct option isn't always in the same slot.
+    qs.push({ q: String(x.q), options: shuffle(opts), answer: ans });
+  }
+  if (!qs.length) throw new Error("Gemma didn't produce usable questions. Try again or pick another topic.");
+  return qs.slice(0, QCOUNT);
 }
 
-// One call: Gemma judges the answer AND writes the in-character reaction.
-async function judge(q, given, player) {
+async function reaction(q, picked, correct) {
   const history = state.log.slice(-8).join("\n") || "(first question)";
-  const text = await gemma([
+  return gemma([
     { role: "system", content: SYSTEM },
     { role: "user", content:
 `Game so far:
 ${history}
 
-Contestant: ${player}. Score ${state.score}, streak ${state.streak}.
+Contestant: ${state.player}. Score ${state.score}, streak ${state.streak}.
 Question: ${q.q}
-Reference answer: ${q.a}
-${player} said: "${given || "(skipped, gave up)"}"
+Options: ${q.options.join(" / ")}
+Correct answer: ${q.answer}
+${state.player} picked: "${picked}", which is ${correct ? "CORRECT" : "WRONG"}.
 
-Decide if it is correct (accept synonyms, spelling slips and equivalent phrasing; skipping is wrong).
-Then write Grumbold's reaction in 1-3 short sentences, addressing ${player} by name. If wrong, reveal the correct answer. No emojis, no stage directions, no markdown.
-Reply as JSON only: {"correct": true|false, "reply": "..."}` },
-  ], { json: true, tokens: 250 });
-  const d = parseJSON(text);
-  return { correct: d.correct === true || d.correct === "true", reply: String(d.reply || "").trim() };
+Write Grumbold's reaction in 1-3 short sentences, addressing ${state.player} by name.${correct ? "" : " Mention the correct answer."} No emojis, no stage directions, no markdown.` },
+  ], { tokens: 160 });
 }
 
-// ---- Game flow ----
-function nextQuestion() {
-  state.i++;
-  if (state.i >= state.list.length) return finish();
-  updateStats();
-  add("question", `Question ${state.i + 1}: ${state.list[state.i].q}`);
-  setControls(true);
+// ---------- Host bubble ----------
+function hostBubble(slot, kind) {
+  const el = document.createElement("div");
+  el.className = "host" + (kind ? " " + kind : "");
+  el.innerHTML = '<div class="avatar" aria-hidden="true">G</div><div><p class="host-name">Grumbold</p><div class="host-text"><span class="dots" aria-label="Grumbold is typing"><i></i><i></i><i></i></span></div></div>';
+  slot.replaceChildren(el);
+  return text => { el.querySelector(".host-text").textContent = text; };
+}
+
+// ---------- Game flow ----------
+function renderProgress() {
+  $("progress").replaceChildren(...state.list.map((_, i) => {
+    const s = document.createElement("span");
+    s.className = state.results[i] === true ? "ok" : state.results[i] === false ? "bad" : i === state.i ? "current" : "";
+    return s;
+  }));
+}
+
+function renderQuestion() {
+  const q = state.list[state.i];
+  state.locked = false;
+  $("qmeta").textContent = `Question ${state.i + 1} of ${state.list.length}`;
+  $("question").textContent = q.q;
+  $("host-slot").replaceChildren();
+  $("next-btn").hidden = true;
+  $("choices").replaceChildren(...q.options.map((opt, idx) => {
+    const b = document.createElement("button");
+    b.type = "button"; b.className = "choice";
+    b.innerHTML = `<span class="key" aria-hidden="true">${KEYS[idx]}</span><span class="label"></span>`;
+    b.querySelector(".label").textContent = opt;
+    b.addEventListener("click", () => pick(idx));
+    return b;
+  }));
+  renderProgress();
+  $("question").focus({ preventScroll: true });
+}
+
+async function pick(idx) {
+  if (state.locked) return;
+  state.locked = true;
+  const q = state.list[state.i];
+  const picked = q.options[idx];
+  const correct = picked === q.answer;
+
+  // Instant visual feedback, before Gemma replies.
+  [...$("choices").children].forEach((b, i) => {
+    b.disabled = true;
+    const isAnswer = q.options[i] === q.answer;
+    if (isAnswer) { b.classList.add("correct"); b.insertAdjacentHTML("beforeend", ICON_OK); }
+    else if (i === idx) { b.classList.add("wrong"); b.insertAdjacentHTML("beforeend", ICON_NO); }
+    else b.classList.add("dim");
+    if (i === idx) b.classList.add("picked");
+    b.setAttribute("aria-label", `${q.options[i]}${isAnswer ? " (correct answer)" : i === idx ? " (your answer, wrong)" : ""}`);
+  });
+  if (correct) {
+    state.score++; state.streak++;
+    $("score").textContent = state.score;
+    $("score-box").classList.remove("bump"); void $("score-box").offsetWidth; $("score-box").classList.add("bump");
+  } else state.streak = 0;
+  state.results[state.i] = correct;
+  renderProgress();
+  if (navigator.vibrate && !correct) navigator.vibrate(60);
+
+  const setText = hostBubble($("host-slot"), correct ? "ok" : "bad");
+  let text;
+  try { text = await reaction(q, picked, correct); }
+  catch (e) { text = correct ? "Correct. Don't let it go to your head." : `Wrong. It was ${q.answer}. (${e.message})`; }
+  setText(text || (correct ? "Correct. Hmph." : `Wrong. It was ${q.answer}.`));
+  state.log.push(`Q: ${q.q} | answer: ${q.answer} | ${state.player} picked "${picked}" | ${correct ? "CORRECT" : "WRONG"}`);
+
+  $("next-label").textContent = state.i + 1 < state.list.length ? "Next question" : "See results";
+  $("next-btn").hidden = false;
+  $("next-btn").focus({ preventScroll: true });
 }
 
 async function finish() {
-  state.active = false; updateStats();
-  const player = $("player").value.trim() || "the contestant";
-  const typing = add("host typing", "Grumbold tallies your shame…", "Grumbold");
+  show("end-screen");
+  $("final").innerHTML = `${state.score}<small>/${state.list.length}</small>`;
+  const setText = hostBubble($("verdict-slot"));
   let text;
   try {
     text = await gemma([
       { role: "system", content: SYSTEM },
-      { role: "user", content: `Trivia night is over. ${player} scored ${state.score}/${state.list.length}.\nGame log:\n${state.log.join("\n")}\nGive a final 2-3 sentence verdict and send them out of the tavern. No emojis, no markdown.` },
+      { role: "user", content: `Trivia night is over. ${state.player} scored ${state.score}/${state.list.length} on "${state.topic}".\nGame log:\n${state.log.join("\n")}\nGive a final 2-3 sentence verdict and send them out of the tavern. No emojis, no markdown.` },
     ], { tokens: 200 });
-  } catch { text = `That's the lot. ${state.score}/${state.list.length}. Now get out of my tavern.`; }
-  typing.remove();
-  add("host", `${text}\n\nFinal score: ${state.score}/${state.list.length}`, "Grumbold");
+  } catch { text = `${state.score} out of ${state.list.length}. Now get out of my tavern.`; }
+  setText(text);
 }
 
-async function startGame() {
-  if (state.busy) return;
-  const topic = $("topic").value.trim() || "Random trivia";
-  state.busy = true; setControls(false); $("start").disabled = true;
-  chat.innerHTML = "";
-  Object.assign(state, { list: [], i: -1, score: 0, streak: 0, log: [], active: false });
-  updateStats();
-  const typing = add("host typing", `Grumbold squints at the topic "${topic}" and scribbles some questions…`, "Grumbold");
+async function startGame(e) {
+  e?.preventDefault();
+  state.player = $("player").value.trim();
+  if (!state.player) { $("player").focus(); return; }
+  state.topic = $("topic").value.trim() || "General knowledge";
+  $("start-error").hidden = true;
+  $("loading-text").textContent = `Grumbold is writing questions about “${state.topic}”…`;
+  show("loading-screen");
   try {
-    state.list = await generateQuestions(topic);
-    typing.remove();
-    add("host", `"${topic}", is it? Fine. Answer wrong and the whole tavern hears about it.`, "Grumbold");
-    state.active = true;
-    nextQuestion();
-  } catch (e) {
-    typing.remove(); add("error", e.message);
-  } finally { state.busy = false; $("start").disabled = false; }
-}
-
-async function submitAnswer(given) {
-  if (state.busy || !state.active) return;
-  const player = $("player").value.trim() || "the contestant";
-  const q = state.list[state.i];
-  state.busy = true; setControls(false);
-  if (given) add("player", given, player);
-  const typing = add("host typing", "Grumbold is thinking of something cruel…", "Grumbold");
-  try {
-    const res = await judge(q, given, player);
-    typing.remove();
-    if (res.correct) { state.score++; state.streak++; } else state.streak = 0;
-    state.log.push(`Q: ${q.q} | answer: ${q.a} | ${player} said: "${given || "skipped"}" | ${res.correct ? "CORRECT" : "WRONG"}`);
-    add("host " + (res.correct ? "right" : "wrong"), res.reply || (res.correct ? "Correct. Don't gloat." : `Wrong. It was ${q.a}.`), "Grumbold");
-    state.busy = false;
-    nextQuestion();
-  } catch (e) {
-    typing.remove(); add("error", e.message + " (Try answering again.)");
-    state.busy = false; setControls(true);
+    state.list = await generateQuestions(state.topic);
+  } catch (err) {
+    show("start-screen");
+    $("start-error").textContent = err.message; $("start-error").hidden = false;
+    return;
   }
+  Object.assign(state, { i: 0, score: 0, streak: 0, results: [], log: [] });
+  $("score").textContent = 0;
+  show("game-screen");
+  renderQuestion();
 }
 
-// ---- Model picker ----
+$("start-form").addEventListener("submit", startGame);
+$("next-btn").addEventListener("click", () => {
+  state.i++;
+  if (state.i < state.list.length) renderQuestion(); else finish();
+});
+$("again-btn").addEventListener("click", () => { show("start-screen"); $("topic").select(); });
+
+// Keyboard: 1-4 or A-D to answer, Enter for next.
+document.addEventListener("keydown", e => {
+  if ($("game-screen").hidden || e.target.tagName === "INPUT") return;
+  const k = e.key.toUpperCase();
+  const idx = "1234".includes(k) && k ? Number(k) - 1 : KEYS.indexOf(k);
+  if (idx >= 0 && !state.locked) { e.preventDefault(); pick(idx); }
+});
+
+// Topic chips
+const syncChips = () => document.querySelectorAll(".chip").forEach(c => c.setAttribute("aria-pressed", String(c.textContent === $("topic").value)));
+document.querySelectorAll(".chip").forEach(c => c.addEventListener("click", () => { $("topic").value = c.textContent; syncChips(); }));
+$("topic").addEventListener("input", syncChips);
+syncChips();
+
+// ---------- Model picker ----------
 async function loadModels() {
-  const sel = $("model"), prev = sel.value;
-  $("status").textContent = "Looking for Ollama…";
+  const sel = $("model");
+  let saved = ""; try { saved = localStorage.getItem("grumbold-model") || ""; } catch {}
   try {
     const r = await fetch(OLLAMA + "/api/tags");
     const names = (await r.json()).models.map(m => m.name);
-    sel.innerHTML = "";
-    names.forEach(n => sel.add(new Option(n, n)));
-    const best = names.find(n => n === prev) || names.find(n => /gemma[-_:]?4/i.test(n)) || names.find(n => /gemma/i.test(n)) || names[0];
+    sel.replaceChildren(...names.map(n => new Option(n, n)));
+    const best = names.find(n => n === saved) || names.find(n => /gemma[-_:]?4/i.test(n)) || names.find(n => /gemma/i.test(n)) || names[0];
     if (best) sel.value = best;
-    $("status").textContent = names.length ? `Connected · ${names.length} model(s)` : "Connected, but no models installed.";
+    $("conn-dot").className = "dot " + (names.length ? "on" : "off");
+    $("conn-text").textContent = names.length ? "Gemma connected" : "No models installed";
   } catch {
-    sel.innerHTML = "";
-    $("status").textContent = "Ollama not reachable. Run: OLLAMA_ORIGINS=* ollama serve";
+    sel.replaceChildren();
+    $("conn-dot").className = "dot off";
+    $("conn-text").textContent = "Ollama not reachable";
   }
-  try { if (sel.value) localStorage.setItem("grumbold-model", sel.value); } catch {}
+  sel.hidden = !sel.options.length;
 }
-
-$("form").addEventListener("submit", e => {
-  e.preventDefault();
-  const v = $("answer").value.trim();
-  if (!v) return;
-  $("answer").value = "";
-  submitAnswer(v);
-});
-$("skip").addEventListener("click", () => submitAnswer(""));
-$("start").addEventListener("click", startGame);
-$("refresh").addEventListener("click", loadModels);
-$("topic").addEventListener("keydown", e => { if (e.key === "Enter") startGame(); });
-
-add("host", "Welcome to my tavern. Enter a name and a topic, press Start game, and try not to embarrass yourself.", "Grumbold");
+$("model").addEventListener("change", () => { try { localStorage.setItem("grumbold-model", $("model").value); } catch {} });
 loadModels();
 </script>
 </body>
