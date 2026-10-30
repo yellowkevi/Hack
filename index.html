@@ -22,19 +22,21 @@
   .stats b { color: var(--gold); }
   #chat {
     background: var(--panel); border: 1px solid var(--line); border-radius: 12px;
-    padding: 14px; height: 52vh; overflow-y: auto; display: flex; flex-direction: column; gap: 10px;
+    padding: 14px; height: 50vh; overflow-y: auto; display: flex; flex-direction: column; gap: 10px;
   }
   .msg { max-width: 88%; padding: 10px 14px; border-radius: 12px; white-space: pre-wrap; }
   .host { align-self: flex-start; background: #3b2a1b; border: 1px solid var(--line); }
   .host .who { color: var(--gold); font-weight: bold; font-size: .8rem; display: block; margin-bottom: 2px; }
   .player { align-self: flex-end; background: #2d3a2c; border: 1px solid #44603f; }
-  .question { align-self: stretch; max-width: 100%; text-align: center; background: transparent; border: 1px dashed var(--gold); color: var(--gold); }
+  .player .who { color: var(--good); font-weight: bold; font-size: .8rem; display: block; margin-bottom: 2px; }
+  .question { align-self: stretch; max-width: 100%; text-align: center; border: 1px dashed var(--gold); color: var(--gold); }
   .right { border-left: 4px solid var(--good); }
   .wrong { border-left: 4px solid var(--bad); }
+  .error { align-self: stretch; max-width: 100%; border: 1px solid var(--bad); color: var(--bad); }
   .typing { color: var(--muted); font-style: italic; }
-  form { display: flex; gap: 8px; }
-  input[type=text], select, input[type=password] {
-    flex: 1; padding: 11px 12px; border-radius: 8px; border: 1px solid var(--line);
+  form, .row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  input[type=text], select {
+    flex: 1; min-width: 0; padding: 11px 12px; border-radius: 8px; border: 1px solid var(--line);
     background: #20160e; color: var(--text); font: inherit;
   }
   button {
@@ -43,10 +45,8 @@
   }
   button.ghost { background: transparent; color: var(--muted); border: 1px solid var(--line); }
   button:disabled { opacity: .5; cursor: default; }
-  .row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
-  .row label { color: var(--muted); font-size: .9rem; }
-  details { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 8px 12px; color: var(--muted); font-size: .9rem; }
-  details .grid { display: grid; gap: 8px; margin-top: 8px; }
+  label { color: var(--muted); font-size: .9rem; }
+  #status { color: var(--muted); font-size: .85rem; }
   @media (max-width: 520px) { body { font-size: 16px; } .msg { max-width: 95%; } }
 </style>
 </head>
@@ -62,91 +62,40 @@
   </header>
 
   <div class="row">
-    <label for="cat">Category</label>
-    <select id="cat" style="flex:0 1 200px"></select>
     <label for="player">Contestant</label>
-    <input type="text" id="player" placeholder="Name (e.g. Judge Dave)" style="flex:0 1 200px" maxlength="24">
-    <button class="ghost" id="restart" type="button">New game</button>
+    <input type="text" id="player" placeholder="Name (e.g. Judge Dave)" maxlength="24" style="flex:0 1 180px">
+    <label for="topic">Topic</label>
+    <input type="text" id="topic" placeholder="Anything: 90s cartoons, space, cheese…" value="Random trivia" maxlength="80">
+    <button id="start" type="button">Start game</button>
   </div>
 
   <div id="chat" aria-live="polite"></div>
 
   <form id="form" autocomplete="off">
-    <input type="text" id="answer" placeholder="Your answer, if you dare…" autofocus>
-    <button id="submit" type="submit">Answer</button>
-    <button id="skip" class="ghost" type="button">Skip</button>
+    <input type="text" id="answer" placeholder="Your answer, if you dare…" disabled>
+    <button id="submit" type="submit" disabled>Answer</button>
+    <button id="skip" class="ghost" type="button" disabled>Skip</button>
   </form>
 
-  <details>
-    <summary>Gemma settings (optional – works offline with canned insults)</summary>
-    <div class="grid">
-      <select id="provider">
-        <option value="ollama">Ollama (local, e.g. gemma3)</option>
-        <option value="gemini">Google AI Studio API (Gemma)</option>
-        <option value="none">None – canned insults only</option>
-      </select>
-      <input type="text" id="model" placeholder="Model name">
-      <input type="text" id="endpoint" placeholder="Ollama URL (default http://localhost:11434)">
-      <input type="password" id="apikey" placeholder="API key (AI Studio only; stored in this browser)">
-      <div class="row"><button type="button" id="save">Save</button><span id="status"></span></div>
-    </div>
-  </details>
+  <div class="row">
+    <label for="model">Gemma model</label>
+    <select id="model" style="flex:0 1 220px"></select>
+    <button class="ghost" id="refresh" type="button">Refresh models</button>
+    <span id="status"></span>
+  </div>
 </main>
 
 <script>
-const QUESTIONS = {
-  "Tavern General": [
-    { q: "What is the capital of Australia?", a: ["canberra"] },
-    { q: "How many legs does a spider have?", a: ["8", "eight"] },
-    { q: "What is the largest planet in our solar system?", a: ["jupiter"] },
-    { q: "Which element has the chemical symbol 'Au'?", a: ["gold"] },
-    { q: "Who painted the Mona Lisa?", a: ["leonardo da vinci", "da vinci", "leonardo", "davinci"] },
-  ],
-  "Fantasy & Games": [
-    { q: "In Tolkien's work, what is the name of Bilbo's sword?", a: ["sting"] },
-    { q: "Which Nintendo character is a plumber who rescues Princess Peach?", a: ["mario", "super mario"] },
-    { q: "How many sides does a standard Dungeons & Dragons d20 have?", a: ["20", "twenty"] },
-    { q: "What is the name of the dragon in 'The Hobbit'?", a: ["smaug"] },
-    { q: "In Minecraft, what explosive green creature hisses before blowing up?", a: ["creeper", "a creeper"] },
-  ],
-  "Science & Nerdery": [
-    { q: "What does 'CPU' stand for?", a: ["central processing unit"] },
-    { q: "What gas do plants absorb from the atmosphere for photosynthesis?", a: ["carbon dioxide", "co2"] },
-    { q: "What is the speed of light, roughly, in km/s? (nearest hundred thousand)", a: ["300000", "300,000", "300 000"] },
-    { q: "Who proposed the theory of general relativity?", a: ["einstein", "albert einstein"] },
-    { q: "What is the hardest natural substance on Earth?", a: ["diamond", "diamonds"] },
-  ],
-};
-
-const CANNED = {
-  right: [
-    "Hmph. Correct. Don't let it go to your head, it's already roomy in there.",
-    "Even a blind goblin finds a coin eventually. Take your point.",
-    "…Fine. That's right. I hate that I'm impressed.",
-  ],
-  wrong: [
-    "WRONG. Spectacularly. I've heard better guesses from a drunk gnome.",
-    "No. Did you think about that, or did the answer just fall out of your face?",
-    "Incorrect! My cat knows that, and my cat has been dead for years.",
-  ],
-  skip: [
-    "Giving up already? The door's behind you. Mind the pigs.",
-    "A coward's answer. I'll write it on the wall of shame.",
-  ],
-  done: "That's the lot. Now get out of my tavern, I have actual customers.",
-};
-
+const OLLAMA = "http://localhost:11434";
+const QCOUNT = 5;
 const $ = id => document.getElementById(id);
 const chat = $("chat");
-const state = { cat: null, list: [], i: -1, score: 0, streak: 0, busy: false, answered: true, history: [] };
-const cfg = (() => {
-  try { return JSON.parse(localStorage.getItem("grumbold-cfg")) || {}; } catch { return {}; }
-})();
-cfg.provider ||= "ollama"; cfg.model ||= "gemma3"; cfg.endpoint ||= "http://localhost:11434"; cfg.apikey ||= "";
+const state = { list: [], i: -1, score: 0, streak: 0, busy: false, active: false, log: [] };
 
-const pick = arr => arr[Math.floor(Math.random() * arr.length)];
-const norm = s => s.toLowerCase().replace(/[^a-z0-9 ]/g, " ").replace(/\b(the|a|an)\b/g, " ").replace(/\s+/g, " ").trim();
-const shuffle = a => { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+const SYSTEM = `You are Grumbold, a stubborn, condescending tavern keeper hosting trivia night in a fantasy RPG tavern.
+You roast contestants who answer wrong: funny, creative, PG-13, aimed at their answer and their earlier mistakes, never at protected traits or real hardship.
+When they answer right you grudgingly concede while staying smug and unimpressed.
+You remember the whole game and call back earlier answers.`;
 
 function add(cls, text, who) {
   const d = document.createElement("div");
@@ -157,129 +106,165 @@ function add(cls, text, who) {
   return d;
 }
 
-function isCorrect(input, answers) {
-  const n = norm(input);
-  if (!n) return false;
-  return answers.some(a => {
-    const t = norm(a);
-    return n === t || (n.length >= 3 && n.split(" ").includes(t)) || (t.length > 4 && n.includes(t));
-  });
-}
-
-const SYSTEM = `You are Grumbold, a stubborn, condescending tavern keeper running a trivia night in a fantasy RPG tavern.
-You roast contestants who answer wrong (funny, creative, PG-13, punch at their answer, never at protected traits or real hardship).
-When they answer right you grudgingly concede a point while staying smug and unimpressed.
-ALWAYS reveal the correct answer when they get it wrong. Reply in 1-3 short sentences. No emojis, no stage directions, no markdown.`;
-
-async function askGemma(prompt) {
-  if (cfg.provider === "none") throw new Error("disabled");
-  const ctl = new AbortController(); const t = setTimeout(() => ctl.abort(), 20000);
-  try {
-    if (cfg.provider === "gemini") {
-      if (!cfg.apikey) throw new Error("no key");
-      const model = cfg.model || "gemma-3-27b-it";
-      const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(cfg.apikey)}`, {
-        method: "POST", signal: ctl.signal, headers: { "Content-Type": "application/json" },
-        // Gemma models on AI Studio don't accept a system role, so fold it into the prompt.
-        body: JSON.stringify({ contents: [{ role: "user", parts: [{ text: SYSTEM + "\n\n" + prompt }] }], generationConfig: { temperature: 1.0, maxOutputTokens: 160 } }),
-      });
-      if (!r.ok) throw new Error("HTTP " + r.status);
-      const j = await r.json();
-      return j.candidates[0].content.parts.map(p => p.text).join("").trim();
-    }
-    const r = await fetch(cfg.endpoint.replace(/\/$/, "") + "/api/chat", {
-      method: "POST", signal: ctl.signal, headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ model: cfg.model, stream: false, options: { temperature: 1.0, num_predict: 160 },
-        messages: [{ role: "system", content: SYSTEM }, { role: "user", content: prompt }] }),
-    });
-    if (!r.ok) throw new Error("HTTP " + r.status);
-    return (await r.json()).message.content.trim();
-  } finally { clearTimeout(t); }
-}
-
-async function hostReact(kind, q, given) {
-  const player = $("player").value.trim() || "the contestant";
-  const typing = add("host typing", "Grumbold is thinking of something cruel…", "Grumbold");
-  const answer = q.a[0];
-  const prompt = kind === "right"
-    ? `Question: "${q.q}"\n${player} answered "${given}", which is CORRECT. Current streak: ${state.streak}. Grudgingly concede.`
-    : kind === "skip"
-    ? `Question: "${q.q}"\n${player} gave up and skipped. The answer was "${answer}". Mock them for it.`
-    : `Question: "${q.q}"\n${player} answered "${given}", which is WRONG. The correct answer is "${answer}". Roast ${player} and their answer by name.`;
-  let text;
-  try { text = await askGemma(prompt); if (!text) throw new Error("empty"); }
-  catch {
-    text = pick(CANNED[kind]);
-    if (kind !== "right") text += ` (It was "${answer}".)`;
-  }
-  typing.remove();
-  add("host " + (kind === "right" ? "right" : "wrong"), text, "Grumbold");
-}
-
+function setControls(on) { ["answer", "submit", "skip"].forEach(id => $(id).disabled = !on); if (on) $("answer").focus(); }
 function updateStats() {
   $("score").textContent = state.score; $("streak").textContent = state.streak;
   $("qnum").textContent = Math.max(state.i + 1, 0); $("qtotal").textContent = state.list.length;
 }
 
+// ---- Gemma (Ollama) ----
+async function gemma(messages, { json = false, tokens = 400, temperature = 1.0 } = {}) {
+  const model = $("model").value;
+  if (!model) throw new Error("No model selected. Is Ollama running?");
+  const body = { model, stream: false, messages, options: { temperature, num_predict: tokens } };
+  if (json) body.format = "json";
+  let r;
+  try {
+    r = await fetch(OLLAMA + "/api/chat", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+  } catch {
+    throw new Error("Can't reach Ollama at " + OLLAMA + ". Start it with: OLLAMA_ORIGINS=* ollama serve");
+  }
+  if (!r.ok) throw new Error("Ollama error " + r.status + ": " + (await r.text()).slice(0, 200));
+  return (await r.json()).message.content.trim();
+}
+
+function parseJSON(text) {
+  try { return JSON.parse(text); } catch {}
+  const m = text.match(/[\[{][\s\S]*[\]}]/);
+  if (m) return JSON.parse(m[0]);
+  throw new Error("Gemma didn't return valid JSON.");
+}
+
+async function generateQuestions(topic) {
+  const text = await gemma([
+    { role: "system", content: "You write trivia questions. Output only JSON." },
+    { role: "user", content: `Write ${QCOUNT} trivia questions about "${topic}", easy to medium difficulty, each with a short, unambiguous factual answer. Reply as JSON: {"questions":[{"q":"...","a":"..."}]}` },
+  ], { json: true, tokens: 700, temperature: 0.8 });
+  const data = parseJSON(text);
+  const qs = (Array.isArray(data) ? data : data.questions || []).filter(x => x && x.q && x.a);
+  if (!qs.length) throw new Error("Gemma didn't produce any questions.");
+  return qs.slice(0, QCOUNT).map(x => ({ q: String(x.q), a: String(x.a) }));
+}
+
+// One call: Gemma judges the answer AND writes the in-character reaction.
+async function judge(q, given, player) {
+  const history = state.log.slice(-8).join("\n") || "(first question)";
+  const text = await gemma([
+    { role: "system", content: SYSTEM },
+    { role: "user", content:
+`Game so far:
+${history}
+
+Contestant: ${player}. Score ${state.score}, streak ${state.streak}.
+Question: ${q.q}
+Reference answer: ${q.a}
+${player} said: "${given || "(skipped, gave up)"}"
+
+Decide if it is correct (accept synonyms, spelling slips and equivalent phrasing; skipping is wrong).
+Then write Grumbold's reaction in 1-3 short sentences, addressing ${player} by name. If wrong, reveal the correct answer. No emojis, no stage directions, no markdown.
+Reply as JSON only: {"correct": true|false, "reply": "..."}` },
+  ], { json: true, tokens: 250 });
+  const d = parseJSON(text);
+  return { correct: d.correct === true || d.correct === "true", reply: String(d.reply || "").trim() };
+}
+
+// ---- Game flow ----
 function nextQuestion() {
   state.i++;
-  if (state.i >= state.list.length) {
-    add("host", `${CANNED.done}\nFinal score: ${state.score}/${state.list.length}.`, "Grumbold");
-    state.answered = true; $("answer").disabled = true; $("submit").disabled = true; $("skip").disabled = true;
-    updateStats(); return;
-  }
-  state.answered = false; updateStats();
-  add("question", `Question ${state.i + 1}: ${state.list[state.i].q}`);
-  $("answer").focus();
-}
-
-function newGame() {
-  state.cat = $("cat").value; state.list = shuffle(QUESTIONS[state.cat]);
-  state.i = -1; state.score = 0; state.streak = 0;
-  chat.innerHTML = "";
-  ["answer", "submit", "skip"].forEach(id => $(id).disabled = false);
-  add("host", `Another fool wanders in. Fine — "${state.cat}" it is. Answer wrong and I'll let the whole tavern hear about it.`, "Grumbold");
-  nextQuestion();
-}
-
-async function handle(kind, given) {
-  if (state.busy || state.answered) return;
-  state.busy = true; state.answered = true;
-  $("submit").disabled = $("skip").disabled = true;
-  const q = state.list[state.i];
-  if (kind === "right") { state.score++; state.streak++; } else state.streak = 0;
+  if (state.i >= state.list.length) return finish();
   updateStats();
-  await hostReact(kind, q, given);
-  state.busy = false;
-  $("submit").disabled = $("skip").disabled = false;
-  nextQuestion();
+  add("question", `Question ${state.i + 1}: ${state.list[state.i].q}`);
+  setControls(true);
+}
+
+async function finish() {
+  state.active = false; updateStats();
+  const player = $("player").value.trim() || "the contestant";
+  const typing = add("host typing", "Grumbold tallies your shame…", "Grumbold");
+  let text;
+  try {
+    text = await gemma([
+      { role: "system", content: SYSTEM },
+      { role: "user", content: `Trivia night is over. ${player} scored ${state.score}/${state.list.length}.\nGame log:\n${state.log.join("\n")}\nGive a final 2-3 sentence verdict and send them out of the tavern. No emojis, no markdown.` },
+    ], { tokens: 200 });
+  } catch { text = `That's the lot. ${state.score}/${state.list.length}. Now get out of my tavern.`; }
+  typing.remove();
+  add("host", `${text}\n\nFinal score: ${state.score}/${state.list.length}`, "Grumbold");
+}
+
+async function startGame() {
+  if (state.busy) return;
+  const topic = $("topic").value.trim() || "Random trivia";
+  state.busy = true; setControls(false); $("start").disabled = true;
+  chat.innerHTML = "";
+  Object.assign(state, { list: [], i: -1, score: 0, streak: 0, log: [], active: false });
+  updateStats();
+  const typing = add("host typing", `Grumbold squints at the topic "${topic}" and scribbles some questions…`, "Grumbold");
+  try {
+    state.list = await generateQuestions(topic);
+    typing.remove();
+    add("host", `"${topic}", is it? Fine. Answer wrong and the whole tavern hears about it.`, "Grumbold");
+    state.active = true;
+    nextQuestion();
+  } catch (e) {
+    typing.remove(); add("error", e.message);
+  } finally { state.busy = false; $("start").disabled = false; }
+}
+
+async function submitAnswer(given) {
+  if (state.busy || !state.active) return;
+  const player = $("player").value.trim() || "the contestant";
+  const q = state.list[state.i];
+  state.busy = true; setControls(false);
+  if (given) add("player", given, player);
+  const typing = add("host typing", "Grumbold is thinking of something cruel…", "Grumbold");
+  try {
+    const res = await judge(q, given, player);
+    typing.remove();
+    if (res.correct) { state.score++; state.streak++; } else state.streak = 0;
+    state.log.push(`Q: ${q.q} | answer: ${q.a} | ${player} said: "${given || "skipped"}" | ${res.correct ? "CORRECT" : "WRONG"}`);
+    add("host " + (res.correct ? "right" : "wrong"), res.reply || (res.correct ? "Correct. Don't gloat." : `Wrong. It was ${q.a}.`), "Grumbold");
+    state.busy = false;
+    nextQuestion();
+  } catch (e) {
+    typing.remove(); add("error", e.message + " (Try answering again.)");
+    state.busy = false; setControls(true);
+  }
+}
+
+// ---- Model picker ----
+async function loadModels() {
+  const sel = $("model"), prev = sel.value;
+  $("status").textContent = "Looking for Ollama…";
+  try {
+    const r = await fetch(OLLAMA + "/api/tags");
+    const names = (await r.json()).models.map(m => m.name);
+    sel.innerHTML = "";
+    names.forEach(n => sel.add(new Option(n, n)));
+    const best = names.find(n => n === prev) || names.find(n => /gemma[-_:]?4/i.test(n)) || names.find(n => /gemma/i.test(n)) || names[0];
+    if (best) sel.value = best;
+    $("status").textContent = names.length ? `Connected · ${names.length} model(s)` : "Connected, but no models installed.";
+  } catch {
+    sel.innerHTML = "";
+    $("status").textContent = "Ollama not reachable. Run: OLLAMA_ORIGINS=* ollama serve";
+  }
+  try { if (sel.value) localStorage.setItem("grumbold-model", sel.value); } catch {}
 }
 
 $("form").addEventListener("submit", e => {
   e.preventDefault();
   const v = $("answer").value.trim();
-  if (!v || state.busy) return;
-  add("player", v, $("player").value.trim() || "You");
+  if (!v) return;
   $("answer").value = "";
-  handle(isCorrect(v, state.list[state.i].a) ? "right" : "wrong", v);
+  submitAnswer(v);
 });
-$("skip").addEventListener("click", () => { if (!state.busy) handle("skip", ""); });
-$("restart").addEventListener("click", newGame);
-$("cat").addEventListener("change", newGame);
+$("skip").addEventListener("click", () => submitAnswer(""));
+$("start").addEventListener("click", startGame);
+$("refresh").addEventListener("click", loadModels);
+$("topic").addEventListener("keydown", e => { if (e.key === "Enter") startGame(); });
 
-$("save").addEventListener("click", () => {
-  Object.assign(cfg, { provider: $("provider").value, model: $("model").value.trim(), endpoint: $("endpoint").value.trim(), apikey: $("apikey").value.trim() });
-  try { localStorage.setItem("grumbold-cfg", JSON.stringify(cfg)); } catch {}
-  $("status").textContent = "Saved."; setTimeout(() => $("status").textContent = "", 1500);
-});
-$("provider").addEventListener("change", () => {
-  if ($("provider").value === "gemini" && (!$("model").value || $("model").value === "gemma3")) $("model").value = "gemma-3-27b-it";
-  if ($("provider").value === "ollama" && $("model").value.startsWith("gemma-3-")) $("model").value = "gemma3";
-});
-
-for (const c of Object.keys(QUESTIONS)) $("cat").add(new Option(c, c));
-$("provider").value = cfg.provider; $("model").value = cfg.model; $("endpoint").value = cfg.endpoint; $("apikey").value = cfg.apikey;
-newGame();
+add("host", "Welcome to my tavern. Enter a name and a topic, press Start game, and try not to embarrass yourself.", "Grumbold");
+loadModels();
 </script>
 </body>
 </html>
