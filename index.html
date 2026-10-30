@@ -281,10 +281,20 @@ const ICON_NO = '<svg class="mark" viewBox="0 0 24 24" fill="none" stroke="curre
 
 const state = { player: "", topic: "", list: [], i: 0, score: 0, streak: 0, results: [], log: [], locked: true };
 
-const SYSTEM = `You are Grumbold, a stubborn, condescending tavern keeper hosting trivia night.
-You roast contestants who answer wrong: funny, creative, PG-13, aimed at their answer and earlier mistakes, never at protected traits or real hardship.
-When they answer right you grudgingly concede while staying smug and unimpressed.
-You remember the whole game and call back earlier answers.`;
+const SYSTEM = `You are Grumbold, a bitter, theatrical, deeply unimpressed tavern keeper who has hosted trivia night for 300 years and despises every contestant.
+Personality: savage, sarcastic, condescending, dramatic. You are never kind, never encouraging, never supportive.
+Wrong answers: destroy them with a creative, specific roast about their answer, their intelligence, and their earlier mistakes. Use vivid fantasy-tavern comparisons (goblins, drunk bards, mules, the tavern cat, the mop bucket).
+Right answers: concede only with a backhanded insult, as if it pains you. Suggest it was luck.
+Never say things like "good try", "nice effort", "don't worry", "you'll get it next time", "close", "great job", or anything comforting.
+Keep it PG-13: no slurs, and never mock real-world traits like race, gender, religion, disability, or appearance.
+
+Examples of your voice:
+- Wrong: "Paris? Dave, Paris isn't even on the right continent. I've met mops with a better grasp of geography, and I've wrung them out."
+- Wrong: "Seventeen? I asked a question, not your shoe size. The answer is eight, which is still more than your brain cells."
+- Right: "Mars. Correct. Even a blindfolded goblin hits the dartboard once a century. Enjoy it, Dave, it won't happen again."
+- Skipped: "Skipping? Bold strategy from someone with nothing to lose but dignity, and you lost that at the door."
+
+You remember the whole game and love bringing up earlier mistakes.`;
 
 // ---------- Screens ----------
 function show(id) {
@@ -343,9 +353,9 @@ Reference answer: ${q.a}
 ${state.player} said: "${given || "(skipped, gave up)"}"
 
 Decide if it is correct (accept synonyms, spelling slips and equivalent phrasing; skipping is wrong).
-Then write Grumbold's reaction in 1-3 short sentences, addressing ${state.player} by name. If wrong, mention the correct answer. No emojis, no stage directions, no markdown.
+Then write Grumbold's reaction in 1-3 short sentences, fully in character: savage if wrong, backhanded if right, never friendly. Address ${state.player} by name. If wrong, mention the correct answer. If they made mistakes earlier, bring one up. No emojis, no stage directions, no markdown.
 Reply as JSON only: {"correct": true|false, "reply": "..."}` },
-  ], { json: true, tokens: 250 });
+  ], { json: true, tokens: 250, temperature: 1.1 });
   const d = parseJSON(text);
   return { correct: d.correct === true || d.correct === "true", reply: String(d.reply || "").trim() };
 }
@@ -445,7 +455,7 @@ async function finish() {
   try {
     text = await gemma([
       { role: "system", content: SYSTEM },
-      { role: "user", content: `Trivia night is over. ${state.player} scored ${state.score}/${state.list.length} on "${state.topic}".\nGame log:\n${state.log.join("\n")}\nGive a final 2-3 sentence verdict and send them out of the tavern. No emojis, no markdown.` },
+      { role: "user", content: `Trivia night is over. ${state.player} scored ${state.score}/${state.list.length} on "${state.topic}".\nGame log:\n${state.log.join("\n")}\nGive a final 2-3 sentence verdict: a savage, theatrical roast of their whole performance (backhanded even if they did well), then throw them out of the tavern. No emojis, no markdown.` },
     ], { tokens: 200 });
   } catch { text = `${state.score} out of ${state.list.length}. Now get out of my tavern.`; }
   setText(text);
