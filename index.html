@@ -118,9 +118,12 @@ async function gemma(messages, { json = false, tokens = 400, temperature = 1.0 }
   if (!model) throw new Error("No model selected. Is Ollama running?");
   const body = { model, stream: false, messages, options: { temperature, num_predict: tokens } };
   if (json) body.format = "json";
+  const post = b => fetch(OLLAMA + "/api/chat", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(b) });
   let r;
   try {
-    r = await fetch(OLLAMA + "/api/chat", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+    // Skip Gemma's slow "thinking" phase; retry without the flag if the model rejects it.
+    r = await post({ ...body, think: false });
+    if (r.status === 400) r = await post(body);
   } catch {
     throw new Error("Can't reach Ollama at " + OLLAMA + ". Start it with: OLLAMA_ORIGINS=* ollama serve");
   }
